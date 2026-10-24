@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabaseClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,11 +18,15 @@ const statusConfig = {
   rejected: { label: "Rechazada", color: "bg-red-50 text-red-700 border-red-200", icon: XCircle },
 };
 
-// Hook to fetch a user by id (used to reveal name/email of the other party)
+// Hook to fetch a profile by id (used to reveal name/email of the other party)
 function useUser(userId) {
   return useQuery({
     queryKey: ["user", userId],
-    queryFn: () => base44.entities.User.get(userId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });
@@ -35,16 +39,35 @@ export default function ContactRequests() {
 
   const { data: received = [], isLoading: loadingReceived } = useQuery({
     queryKey: ["contacts-received"],
-    queryFn: () => base44.entities.ContactRequest.filter({ owner_id: user.id }, "-created_date"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contact_requests")
+        .select("*")
+        .eq("owner_id", user.id)
+        .order("created_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
   });
 
   const { data: sent = [], isLoading: loadingSent } = useQuery({
     queryKey: ["contacts-sent"],
-    queryFn: () => base44.entities.ContactRequest.filter({ requester_id: user.id }, "-created_date"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contact_requests")
+        .select("*")
+        .eq("requester_id", user.id)
+        .order("created_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
   });
 
   const updateStatus = useMutation({
-    mutationFn: ({ id, status }) => base44.entities.ContactRequest.update(id, { status }),
+    mutationFn: async ({ id, status }) => {
+      const { error } = await supabase.from("contact_requests").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: (_, { status }) => {
       queryClient.invalidateQueries({ queryKey: ["contacts-received"] });
       toast({ title: status === "accepted" ? "Solicitud aceptada — contacto revelado" : "Solicitud rechazada" });

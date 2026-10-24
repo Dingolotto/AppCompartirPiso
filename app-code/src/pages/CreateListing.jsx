@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ export default function CreateListing() {
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const onChange = (newData) => setFormData(newData);
   const type = formData.listing_type;
@@ -43,8 +45,11 @@ export default function CreateListing() {
     const files = Array.from(e.target.files);
     const urls = [];
     for (const file of files) {
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
-      urls.push(file_url);
+      const path = `${user.id}/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from("listing-images").upload(path, file);
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from("listing-images").getPublicUrl(path);
+      urls.push(data.publicUrl);
     }
     setFormData(prev => ({ ...prev, images: [...(prev.images || []), ...urls] }));
   };
@@ -60,7 +65,8 @@ export default function CreateListing() {
     }
     setSaving(true);
     try {
-      await base44.entities.Listing.create(formData);
+      const { error } = await supabase.from("listings").insert({ ...formData, created_by_id: user.id });
+      if (error) throw error;
       toast({ title: "¡Anuncio publicado!", description: "Tu anuncio ya está visible." });
       navigate("/my-listings");
     } catch (err) {

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabaseClient";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,16 @@ export default function SearchListings() {
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["listings"],
-    queryFn: () => base44.entities.Listing.filter({ status: "active" }, "-created_date", 100),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("listings")
+        .select("*")
+        .eq("status", "active")
+        .order("created_date", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data;
+    },
   });
 
   const filtered = useMemo(() => {
@@ -62,13 +71,18 @@ export default function SearchListings() {
   const handleSaveRadar = () => setRadarDialog(true);
 
   const confirmSaveRadar = async () => {
-    await base44.entities.SavedSearch.create({
+    const { error } = await supabase.from("saved_searches").insert({
+      created_by_id: user.id,
       name: radarName || "Mi búsqueda",
       search_type: filters.listing_type || "casa_completa",
       filters,
       notify: true,
       new_matches_count: 0,
     });
+    if (error) {
+      toast({ title: "Error al guardar el radar", description: error.message, variant: "destructive" });
+      return;
+    }
     toast({ title: "¡Radar guardado!", description: "Te notificaremos de nuevas coincidencias." });
     setRadarDialog(false);
     setRadarName("");

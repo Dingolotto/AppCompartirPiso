@@ -10,6 +10,7 @@ export const adminEntities = {
   Listing: {
     label: "Anuncios",
     icon: Home,
+    table: "listings",
     columns: [
       { key: "title", label: "Título" },
       { key: "listing_type", label: "Tipo" },
@@ -75,6 +76,7 @@ export const adminEntities = {
   ContactRequest: {
     label: "Solicitudes",
     icon: MessageSquare,
+    table: "contact_requests",
     columns: [
       { key: "requester_name", label: "Solicitante" },
       { key: "listing_id", label: "Anuncio" },
@@ -96,6 +98,7 @@ export const adminEntities = {
   SavedSearch: {
     label: "Búsquedas guardadas",
     icon: Radar,
+    table: "saved_searches",
     columns: [
       { key: "name", label: "Nombre" },
       { key: "search_type", label: "Tipo" },
@@ -113,6 +116,7 @@ export const adminEntities = {
   User: {
     label: "Usuarios",
     icon: Users,
+    table: "profiles",
     note: "Los campos integrados del usuario (nombre, email, fechas) los gestiona el backend y no son editables — solo el rol puede modificarse.",
     columns: [
       { key: "full_name", label: "Nombre" },

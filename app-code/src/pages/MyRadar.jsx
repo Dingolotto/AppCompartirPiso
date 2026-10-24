@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabaseClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { Link } from "react-router-dom";
@@ -20,11 +20,22 @@ export default function MyRadar() {
 
   const { data: searches = [], isLoading } = useQuery({
     queryKey: ["saved-searches"],
-    queryFn: () => base44.entities.SavedSearch.filter({ created_by_id: user.id }, "-created_date"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("saved_searches")
+        .select("*")
+        .eq("created_by_id", user.id)
+        .order("created_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.SavedSearch.delete(id),
+    mutationFn: async (id) => {
+      const { error } = await supabase.from("saved_searches").delete().eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["saved-searches"] });
       toast({ title: "Alerta eliminada" });
@@ -32,7 +43,10 @@ export default function MyRadar() {
   });
 
   const toggleNotify = useMutation({
-    mutationFn: ({ id, notify }) => base44.entities.SavedSearch.update(id, { notify }),
+    mutationFn: async ({ id, notify }) => {
+      const { error } = await supabase.from("saved_searches").update({ notify }).eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["saved-searches"] }),
   });
 

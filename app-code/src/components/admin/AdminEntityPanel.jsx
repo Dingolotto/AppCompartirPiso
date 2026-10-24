@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabaseClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
@@ -26,16 +26,30 @@ export default function AdminEntityPanel({ entityName, config }) {
 
   const { data: records = [], isLoading } = useQuery({
     queryKey: ["admin", entityName],
-    queryFn: () => base44.entities[entityName].list("-created_date", 100),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from(config.table)
+        .select("*")
+        .order("created_date", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data;
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities[entityName].update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const { error } = await supabase.from(config.table).update(data).eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", entityName] }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities[entityName].delete(id),
+    mutationFn: async (id) => {
+      const { error } = await supabase.from(config.table).delete().eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", entityName] }),
   });
 

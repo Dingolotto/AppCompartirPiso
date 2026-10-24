@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
   Home, Search, PlusCircle, List, Bell, MessageSquare,
@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 
 const navItems = [
@@ -28,12 +27,13 @@ const navItems = [
 export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
-  const { user, isAuthenticated, isLoadingAuth, authChecked, logout, navigateToLogin } = useAuth();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, isLoadingAuth, authChecked, logout } = useAuth();
   const authLoading = isLoadingAuth || !authChecked;
   const signedIn = isAuthenticated && !!user;
 
-  const handleLogin = () => navigateToLogin();
-  const handleRegister = () => base44.auth.redirectToLogin(window.location.href, { mode: "register" });
+  const handleLogin = () => navigate("/login", { state: { from: location.pathname } });
+  const handleRegister = () => navigate("/register");
   const handleLogout = () => logout();
 
   return (

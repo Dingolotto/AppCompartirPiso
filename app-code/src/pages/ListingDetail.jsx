@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabaseClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,15 +38,16 @@ export default function ListingDetail() {
   const { data: listing, isLoading } = useQuery({
     queryKey: ["listing", id],
     queryFn: async () => {
-      const results = await base44.entities.Listing.filter({ id }, null, 1);
-      return results[0];
+      const { data, error } = await supabase.from("listings").select("*").eq("id", id).maybeSingle();
+      if (error) throw error;
+      return data;
     },
     enabled: !!id,
   });
 
   const sendContact = useMutation({
     mutationFn: async () => {
-      await base44.entities.ContactRequest.create({
+      const { error } = await supabase.from("contact_requests").insert({
         listing_id: id,
         requester_id: user.id,
         requester_name: user.full_name,
@@ -57,6 +58,7 @@ export default function ListingDetail() {
         owner_id: listing.created_by_id,
         status: "pending",
       });
+      if (error) throw error;
     },
     onSuccess: () => {
       toast({ title: "Solicitud enviada", description: "El propietario revisará tu perfil y decidirá." });

@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabaseClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { Link } from "react-router-dom";
@@ -30,16 +30,30 @@ export default function MyListings() {
 
   const { data: listings = [], isLoading } = useQuery({
     queryKey: ["my-listings"],
-    queryFn: () => base44.entities.Listing.filter({ created_by_id: user.id }, "-created_date"),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("listings")
+        .select("*")
+        .eq("created_by_id", user.id)
+        .order("created_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Listing.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const { error } = await supabase.from("listings").update(data).eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-listings"] }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Listing.delete(id),
+    mutationFn: async (id) => {
+      const { error } = await supabase.from("listings").delete().eq("id", id);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-listings"] });
       toast({ title: "Anuncio eliminado" });
